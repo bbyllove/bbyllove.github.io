@@ -1151,25 +1151,56 @@ body.gallery-focus .gallery-caption { display: none; }
   top: 18px;
   left: 24px;
   right: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+}
+/* 右侧占位与左侧等宽，保证中间的模式按钮真正落在屏幕中轴线上 */
+.gallery-top::after {
+  content: '';
+  width: 34px;
+  justify-self: end;
+}
+button.gallery-title {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-}
-.gallery-title {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 2px;
+  justify-self: start;
+  cursor: pointer;
   color: #ffd9e7;
-  text-shadow: 0 2px 14px rgba(255, 77, 141, 0.55);
-  user-select: text;
+  user-select: none;
+  transition: color 0.18s ease, filter 0.18s ease, transform 0.18s ease;
 }
-.gallery-title span {
-  margin-left: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  opacity: 0.85;
+button.gallery-title .heart-icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+}
+.gallery-title-text {
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Yuanti SC', cursive;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  line-height: 1;
+  background: linear-gradient(120deg, #ffe3ec 20%, #ff7ba3 60%, #ff3d6e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 30px rgba(255, 61, 110, 0.25);
+}
+button.gallery-title:hover {
+  filter: drop-shadow(0 0 10px rgba(255, 77, 141, 0.6));
+}
+button.gallery-title:active { transform: translateY(1px); }
+button.gallery-title:focus-visible {
+  outline: 2px solid rgba(255, 143, 179, 0.85);
+  outline-offset: 4px;
+  border-radius: 8px;
 }
 .demo-notice {
   position: fixed;
@@ -1190,6 +1221,7 @@ body.gallery-focus .gallery-caption { display: none; }
 .demo-notice[hidden] { display: none; }
 .gallery-modes {
   display: flex;
+  justify-self: center;
   gap: 6px;
   padding: 4px;
   border-radius: 999px;
@@ -1216,20 +1248,6 @@ body.gallery-focus .gallery-caption { display: none; }
   color: #fff;
   box-shadow: 0 2px 12px rgba(255, 77, 141, 0.5);
 }
-#galleryExit {
-  padding: 8px 18px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 120, 170, 0.55);
-  background: rgba(255, 77, 141, 0.82);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  cursor: pointer;
-  transition: background 0.18s ease, transform 0.18s ease;
-}
-#galleryExit:hover { background: rgba(255, 77, 141, 1); transform: translateY(-1px); }
-
 .gallery-caption {
   position: absolute;
   left: 50%;
@@ -1284,38 +1302,31 @@ body.gallery-focus .gallery-caption { display: none; }
   justify-content: space-between;
   gap: 8px;
 }
-.panel-collapse-btn {
-  flex: none;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 120, 170, 0.4);
-  background: rgba(255, 77, 141, 0.22);
-  color: #ffd9e7;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease;
-}
-.panel-collapse-btn:hover { background: rgba(255, 77, 141, 0.5); color: #fff; }
-.panel-open-btn {
+#galleryPanelClose.panel-collapse-btn {
   position: absolute;
-  top: 70px;
-  right: 18px;
-  padding: 8px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 120, 170, 0.45);
-  background: rgba(32, 10, 26, 0.82);
+  top: 18px;
+  right: 24px;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 120, 170, 0.4);
+  background: rgba(32, 10, 26, 0.86);
   color: #ffd9e7;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 1px;
+  font-size: 17px;
+  line-height: 1;
   cursor: pointer;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  transition: background 0.18s ease, color 0.18s ease;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.32);
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
 }
-.panel-open-btn:hover { background: rgba(255, 77, 141, 0.4); color: #fff; }
+#galleryPanelClose.panel-collapse-btn:hover {
+  background: rgba(255, 77, 141, 0.45);
+  color: #fff;
+  transform: translateY(-1px);
+}
+body.gallery-focus #galleryPanelClose.panel-collapse-btn { display: none !important; }
 body.gallery-panel-hidden #galleryPanel { display: none; }
 .gallery-panel-head h3 {
   margin: 0;
@@ -1806,10 +1817,24 @@ body:not(.gallery-focus) .gallery-photoquote { opacity: 0; visibility: hidden; }
   .gallery-group { padding: 9px 9px 10px; }
   /* 窄屏侧栏变窄：让位量跟着变小，台词块仍然居中 */
   .gallery-quotes { --gq-panel-side: 236px; }
-  .gallery-quote-line { --gq-pad: 7px; padding-inline: 14px; border-radius: 18px; }
-  /* 窄屏底部空间紧：照片级台词贴得更低、更窄，别把聚焦照片挤得太小 */
+  /* 以 iPhone 17 的 402px 逻辑宽度为准：默认 36px 会被压到约 20px，
+     并收紧字距 / 左右留白，常见 15–17 字台词尽量保持一行。 */
+  .gallery-quote-line {
+    --gq-pad: 6px;
+    padding-inline: 11px;
+    border-radius: 16px;
+    font-size: min(var(--gq-size), max(17px, 5vw));
+    letter-spacing: 0.03em;
+  }
+  /* 窄屏底部空间紧：照片级台词贴得更低、更窄，别把聚焦照片挤得太小。
+     以 iPhone 17 的 402px 逻辑宽度把字号上限压到约 16.5px，
+     最长 18 字内置台词可单行展示；更长的访客台词仍最多两行。 */
   .gallery-photoquote { bottom: 96px; max-width: 88vw; }
-  .gallery-photoquote-line { padding-inline: 13px; border-radius: 15px; }
+  .gallery-photoquote-line {
+    padding-inline: 13px;
+    border-radius: 15px;
+    font-size: min(var(--pq-size), max(15px, 4.1vw));
+  }
 }
 
 /* 内置照片角标：「仓库自带的」与「访客自己加的」一眼可分 */
@@ -1968,4 +1993,87 @@ body.intro-playing > *:not(#introSplash) { visibility: hidden; }
   font-size: 12px;
   letter-spacing: 0.2em;
   color: rgba(255, 217, 231, 0.5);
+}
+
+/* ================================================================
+ * 手机端适配补强
+ * 1) 主设置面板在触控/小屏设备默认收起，四周留给画布触发放烟花；
+ * 2) 手机隐藏底部桌面快捷键说明，使用捏合 / 双击 / 点击手势即可；
+ * 3) 陈列室顶部手机端改为两行：第一行「BBYL + 爱心」，第二行三个模式按钮，
+ *    避免在 390px 宽的手机上三个元素挤成一排；
+ * 4) 收起陈列室侧栏后只保留圆形「«」入口，不再显示「陈列室设置」文字。
+ * ================================================================ */
+html,
+body {
+  overscroll-behavior: none;
+}
+
+@media (max-width: 720px) {
+  .title {
+    top: max(18px, env(safe-area-inset-top));
+    left: max(18px, env(safe-area-inset-left));
+  }
+  .panel-toggle {
+    top: max(18px, env(safe-area-inset-top));
+    right: max(18px, env(safe-area-inset-right));
+  }
+  .panel {
+    top: max(70px, calc(env(safe-area-inset-top) + 70px));
+    right: max(14px, env(safe-area-inset-right));
+    left: max(14px, env(safe-area-inset-left));
+    max-height: calc(100dvh - 150px);
+  }
+  .hints { display: none !important; }
+  .zoom-bar {
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(70px, calc(env(safe-area-inset-bottom) + 70px));
+  }
+}
+
+/* 陈列室手机布局：顶部两行，模式按钮独占第二行并居中 */
+@media (max-width: 700px) {
+  .gallery-top {
+    top: max(10px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    grid-template-columns: minmax(0, 1fr) 34px;
+    grid-template-areas:
+      'title toggle'
+      'modes modes';
+    row-gap: 8px;
+  }
+  .gallery-title {
+    grid-area: title;
+    justify-self: start;
+    min-width: 0;
+  }
+  .gallery-title-text {
+    font-size: 20px;
+    letter-spacing: 1px;
+  }
+  .gallery-top::after {
+    grid-area: toggle;
+    justify-self: end;
+  }
+  .gallery-modes {
+    grid-area: modes;
+    justify-self: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 3px;
+  }
+  .mode-btn {
+    padding: 4px 11px;
+    font-size: 11.5px;
+    letter-spacing: 0.5px;
+  }
+  .gallery-panel {
+    top: max(116px, calc(env(safe-area-inset-top) + 116px));
+    right: max(10px, env(safe-area-inset-right));
+    width: 216px;
+  }
+  #galleryPanelClose.panel-collapse-btn {
+    top: max(10px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+  }
 }

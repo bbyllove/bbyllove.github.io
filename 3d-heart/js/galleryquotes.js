@@ -52,7 +52,8 @@ const EFFECT_LIST = [
   { key: 'smoke', name: '烟消云散', note: '当前句逐字飘散成烟，下一句在原地逐字凝聚' },
   { key: 'type', name: '翻页打字机', note: '当前句像书页一样翻走，下一句在原地逐字打出（带光标）' },
 ];
-const DEFAULT_SIZE_INDEX = 3;   // 标准 36px
+const DEFAULT_SIZE_INDEX = 3;   // 标准 36px（手机另按屏幕宽度加一道显示上限）
+const MOBILE_QUOTE_CAP_VW = 0.05; // iPhone 17（402px 逻辑宽）≈ 20px，减少长台词折行
 const DEFAULT_EFFECT = 2;       // 烟消云散（新访客默认；老访客的已存配置不受影响）
 const MIN_INTERVAL = 2;         // 停留间隔下限（秒）
 const MAX_INTERVAL = 20;        // 停留间隔上限（秒）
@@ -172,9 +173,15 @@ function parseLines(raw) {
 function curFont() {
   return FONT_LIST[quoteParams.fontIndex] || FONT_LIST[0];
 }
+function quoteSizeCapPx() {
+  const vw = window.innerWidth || 0;
+  const compact = window.matchMedia ? window.matchMedia('(max-width: 700px)').matches : vw <= 700;
+  // 与 style.css 窄屏的 max(17px, 5vw) 同口径；落到整数 px，fitFont / debug 才不会误报。
+  return Math.max(17, Math.floor(vw * (compact ? MOBILE_QUOTE_CAP_VW : 0.09)));
+}
 function curSizePx() {
   const s = SIZE_STEPS[quoteParams.sizeIndex] || SIZE_STEPS[DEFAULT_SIZE_INDEX];
-  return s.px;
+  return Math.min(s.px, quoteSizeCapPx());
 }
 function curEffect() {
   return EFFECT_LIST[quoteParams.effect] || EFFECT_LIST[DEFAULT_EFFECT];

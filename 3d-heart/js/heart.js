@@ -427,7 +427,7 @@ function applyDiamondMaterial() {
   diamondMaterial.needsUpdate = true;
 }
 
-const heart = new THREE.Mesh(HEART_SHAPES.classic.build(), heartMaterial);
+const heart = new THREE.Mesh(ensurePlanarUV(HEART_SHAPES.classic.build()), heartMaterial); // 初始形状也使用正面平面投影 UV，默认贴图 / 上传贴图都按同一口径贴满
 heart.castShadow = true;
 
 // 爱心 + 上下文字都挂在这个组里：心跳、摇摆、旋转视角时作为一个整体运动

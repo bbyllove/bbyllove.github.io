@@ -27,8 +27,11 @@ if (panelReset) {
     window.location.reload();
   });
 }
-// 小屏默认收起面板
-if (window.innerWidth >= 720) setPanelOpen(true);
+// 小屏与触控设备默认收起面板：手机横屏宽度可能超过 720px，但仍属于移动端，
+// 不应让右侧设置面板先遮住画面（尤其影响点击四周触发放烟花）。
+const isTouchLikeViewport =
+  window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+if (window.innerWidth >= 720 && !isTouchLikeViewport) setPanelOpen(true);
 
 /* ---------- 分组折叠（<details>）状态保存 ---------- */
 const groupDetails = Array.from(document.querySelectorAll('details.group[data-group]'));

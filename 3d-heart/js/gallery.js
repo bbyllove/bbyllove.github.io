@@ -5,7 +5,7 @@
  *   首尾相连围成整圈、相机在环外俯看、整圈自适应收入画面（参考圆环照片墙）
  * - 每张装进圆角「塑封壳」卡片：
  *   四周透明留白 + 壳下柔边阴影 + 覆膜反光，整体悬浮轻摆；相机立于圆心，
- *   ← / → 切换、空格 = 下一张、ESC 或「退出」按钮返回主页面
+ *   ← / → 切换、空格 = 下一张、ESC 或点击顶栏「BBYL（爱心）」返回主页面
  * - 右侧相册侧栏支持多选图片 / 整文件夹导入，压缩后存入
  *   IndexedDB（heart3d-gallery），刷新自动恢复；缩略图可点击
  *   跳转、单张删除或清空全部
@@ -17,7 +17,7 @@
  * ================================================================ */
 import * as THREE from 'three';
 import { $, isFormTarget } from './dom.js';
-import { renderer } from './core.js';
+import { canvas as rendererCanvas, renderer } from './core.js';
 import { saveConfig, registerConfig } from './config.js';
 import {
   startQuotes, stopQuotes, updateQuotes, quoteDebug,
@@ -557,8 +557,13 @@ function galleryLoop() {
 /* ---------- 陈列模式切换 ---------- */
 function setPanelHidden(hidden) {
   document.body.classList.toggle('gallery-panel-hidden', !!hidden);
-  const open = $('galleryPanelOpen');
-  if (open) open.hidden = !hidden;
+  const toggle = $('galleryPanelClose');
+  if (toggle) {
+    toggle.textContent = hidden ? '«' : '»';
+    toggle.setAttribute('aria-expanded', String(!hidden));
+    toggle.title = hidden ? '展开侧栏' : '收起侧栏';
+    toggle.setAttribute('aria-label', hidden ? '展开陈列室侧栏' : '收起陈列室侧栏');
+  }
   // 侧栏开合改的是台词块的可用宽度（--gq-side）：长句会重新折行、变高，
   // 空白带高度却可能没变 → 每帧那条重排路径不会触发，这里必须强制重算一次字号
   relayoutQuotes();
@@ -578,12 +583,10 @@ function setLayoutMode(mode) {
 }
 
 function syncGalleryMeta() {
-  const count = $('galleryCount');
-  if (count) count.textContent = photos.length ? `${index + 1} / ${photos.length}` : '0 / 0';
   const empty = $('galleryEmpty');
   if (empty) empty.hidden = photos.length > 0;
   const cap = $('galleryCaption');
-  if (cap) cap.textContent = photos.length ? `${index + 1}. ${photos[index].name}` : '—';
+  if (cap) cap.textContent = photos.length ? photos[index].name : '—';
   document.querySelectorAll('#galleryThumbs .gallery-thumb').forEach((el, i) =>
     el.classList.toggle('active', i === index));
   syncPhotoQuoteEditor();   // 侧栏那个「本张台词」编辑框跟着当前选中的照片走
@@ -706,6 +709,12 @@ function onResize() {
   galleryCamera.aspect = window.innerWidth / window.innerHeight;
   galleryCamera.updateProjectionMatrix();
 }
+// 手机（含横屏）和窄屏进入陈列室时，不让右侧管理栏先遮住照片；
+// 仅作为进入时的默认状态，用户点「«」展开后本次访问仍然生效。
+function isCompactGalleryViewport() {
+  const coarsePointer = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  return window.innerWidth < 720 || coarsePointer;
+}
 function openGallery() {
   if (galleryOpen) return;
   galleryOpen = true;
@@ -729,6 +738,7 @@ function openGallery() {
     galleryCamera.rotation.set(0, 0, 0);
     galleryCamera.rotateY(camYaw);
   }
+  setPanelHidden(isCompactGalleryViewport());
   setFocus(false); // 同步默认提示条文案
   syncGalleryMeta();
   setQuoteClearance(quoteClearanceTopPx());  // 先把照片上沿告诉台词模块，第一帧就摆对位置
@@ -755,12 +765,14 @@ if (header) {
   header.title = '进入相册陈列室';
   header.addEventListener('click', openGallery);
 }
-if ($('galleryExit')) $('galleryExit').addEventListener('click', closeGallery);
+if ($('galleryTitle')) $('galleryTitle').addEventListener('click', closeGallery);
 if ($('galleryModeRing')) $('galleryModeRing').addEventListener('click', () => setLayoutMode('ring'));
 if ($('galleryModeCircle')) $('galleryModeCircle').addEventListener('click', () => setLayoutMode('circle'));
 if ($('galleryModeFan')) $('galleryModeFan').addEventListener('click', () => setLayoutMode('fan'));
-if ($('galleryPanelClose')) $('galleryPanelClose').addEventListener('click', () => setPanelHidden(true));
-if ($('galleryPanelOpen')) $('galleryPanelOpen').addEventListener('click', () => setPanelHidden(false));
+if ($('galleryPanelClose'))
+  $('galleryPanelClose').addEventListener('click', () =>
+    setPanelHidden(document.body.classList.contains('gallery-panel-hidden') ? false : true)
+  );
 if ($('galleryAddFiles')) $('galleryAddFiles').addEventListener('click', () => $('galleryFile') && $('galleryFile').click());
 if ($('galleryAddFolder')) $('galleryAddFolder').addEventListener('click', () => $('galleryFolder') && $('galleryFolder').click());
 if ($('galleryFile')) $('galleryFile').addEventListener('change', (e) => { addFiles(e.target.files); e.target.value = ''; });
@@ -797,6 +809,39 @@ if ($('galleryRestoreSeeds')) $('galleryRestoreSeeds').addEventListener('click',
     if (hint) hint.textContent = defaultGalleryHint();
   });
 });
+/* ---------- 环视 / 圆环：手机左右滑动手势，等效 ← / → ----------
+   陈列室叠层本身 pointer-events:none，照片区的触摸最终落在 WebGL 画布上；
+   只认触控/笔触，且要求横向位移明显大于纵向、总时长不超过 800ms。
+   识别为滑动后吞掉随后的 click，避免“切照片 + 误进聚焦”同时发生。 */
+let gallerySwipeStart = null;
+let suppressNextGalleryClick = false;
+rendererCanvas.addEventListener('pointerdown', (e) => {
+  if (!galleryOpen || (e.pointerType !== 'touch' && e.pointerType !== 'pen')) return;
+  // 多指（例如准备捏合/系统手势）一律取消滑动判定
+  if (gallerySwipeStart) gallerySwipeStart = null;
+  else gallerySwipeStart = {
+    id: e.pointerId,
+    x: e.clientX,
+    y: e.clientY,
+    t: performance.now(),
+  };
+}, { passive: true });
+rendererCanvas.addEventListener('pointerup', (e) => {
+  const st = gallerySwipeStart;
+  gallerySwipeStart = null;
+  if (!st || st.id !== e.pointerId) return;
+  if (layoutMode !== 'ring' && layoutMode !== 'circle') return;
+  const dx = e.clientX - st.x;
+  const dy = e.clientY - st.y;
+  const elapsed = performance.now() - st.t;
+  if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.25 || elapsed > 800) return;
+  suppressNextGalleryClick = true;
+  // 浏览器常不会给“滑动”补 click；用短计时兜底清旗，避免误吞下一次真实点按。
+  setTimeout(() => { suppressNextGalleryClick = false; }, 300);
+  setIndex(index + (dx > 0 ? 1 : -1));
+}, { passive: true });
+rendererCanvas.addEventListener('pointercancel', () => { gallerySwipeStart = null; }, { passive: true });
+
 /* ---------- 聚焦模式：点击当前照片 / 滚轮缩放 ---------- */
 function pickPhoto(x, y) {
   _ndc.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
@@ -810,12 +855,16 @@ function pickPhoto(x, y) {
 }
 window.addEventListener('click', (e) => {
   if (!galleryOpen) return;
+  if (suppressNextGalleryClick) {
+    suppressNextGalleryClick = false;
+    return;
+  }
   /* 开门的那次点击不算「点照片」：点击标题（BBYL）会一边打开陈列室、一边冒泡到这里，
      而此刻照片矩阵还停在原点（位置要等第一帧 applyTransforms 才写进去），
      射线必然命中 → 一进陈列室就莫名进了聚焦灯箱。加两道闸：入口元素豁免 + 300ms 冷却 */
   if (performance.now() - openedAt < 300) return;
   if (e.target && e.target.closest
-    && e.target.closest('header.title, #galleryPanel, #galleryExit, button, input')) return;
+    && e.target.closest('header.title, #galleryPanel, button, input')) return;
   const hit = pickPhoto(e.clientX, e.clientY);
   if (focusIndex !== -1) {
     setFocus(false); // 聚焦中：点照片 / 点空白都退出聚焦

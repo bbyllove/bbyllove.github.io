@@ -38,7 +38,7 @@ import {
   syncTextEffectUI, syncTextGradientUI, updateTextAnimation,
 } from './js/text3d.js';
 import { setTextColor, syncLinkedTextColor } from './js/colors.js';
-import './js/hearttex.js'; // 爱心表面贴图（45）
+import { initDefaultHeartTexture } from './js/hearttex.js'; // 爱心表面贴图（45 + 默认贴图）
 
 /* ---------- 开场闪屏（51）：先于一切 UI 露面播；返回的 Promise 供首访引导排队 ---------- */
 const introDone = playIntro();
@@ -72,6 +72,7 @@ import './js/shortcuts.js';
  * 初始化：读取配置 → 应用到场景与面板
  * ================================================================ */
 loadConfig();
+initDefaultHeartTexture(); // 探测 assets/texture/default.jpg；缺失时保持原颜色配置
 setTextColor(textState.color);
 syncLinkedTextColor();
 bindTextControls('top', textState.top, 'top');

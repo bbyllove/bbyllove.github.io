@@ -180,30 +180,52 @@ function spawnFirework(cx, cy, cls) {
 }
 
 /* 触发判定：只对空白处的真正「点击」生效 ——
-   拖拽旋转（位移>8px）、长按(>700ms)、点到 UI 控件上均不触发 */
-let _fxDownX, _fxDownY, _fxDownT;
+   拖拽旋转（位移>8px）、长按(>700ms)、点到 UI 控件上均不触发。
+   移动端浏览器在屏幕边缘 / 系统手势区有时不会补发 click，
+   因此触控/笔触直接在 pointerup 里结算；随后若又收到同点 click 则跳过，避免双爆。 */
+let _fxDownX, _fxDownY, _fxDownT, _fxDownTarget = null, _fxTouchFiredAt = 0;
+function isFxUITarget(target) {
+  return !!(target && target.closest &&
+    target.closest('#panel,#panelToggle,.hints,footer,.zoom-bar,header,#introSplash,button,input,select,label,a'));
+}
+function triggerFireworkAt(x, y, target) {
+  if (!fxEnabled) return;
+  if (document.body.classList.contains('gallery-open')) return; // 相册陈列室里不触发烟花
+  if (isFxUITarget(target) || isFxUITarget(_fxDownTarget)) return;
+  const fxKind = fxClassify(x, y);
+  if (fxKind.kind === 'heart') recordHeartHit(x, y);
+  if (fxKind.kind !== 'round') sfxClick(); // 点中爱心/钻石/文字
+  spawnFirework(x, y, fxKind);
+}
 window.addEventListener(
   'pointerdown',
   (e) => {
     _fxDownX = e.clientX; _fxDownY = e.clientY; _fxDownT = performance.now();
+    _fxDownTarget = e.target;
     if (soundParams.enabled) ensureSoundCtx(); // 用户手势内创建/恢复
+  },
+  { passive: true }
+);
+window.addEventListener(
+  'pointerup',
+  (e) => {
+    if (e.pointerType === 'mouse' || _fxDownX === undefined) return;
+    const moved = Math.hypot(e.clientX - _fxDownX, e.clientY - _fxDownY);
+    if (moved > 8 || performance.now() - _fxDownT > 700) return;
+    triggerFireworkAt(e.clientX, e.clientY, e.target);
+    _fxTouchFiredAt = performance.now();
   },
   { passive: true }
 );
 window.addEventListener(
   'click',
   (e) => {
-    if (!fxEnabled || _fxDownX === undefined) return;
-    if (document.body.classList.contains('gallery-open')) return; // 相册陈列室里不触发烟花
+    if (_fxDownX === undefined) return;
+    // 触控已在 pointerup 结算过：吞掉同点补发的 click，防止一次点击爆两朵。
+    if (performance.now() - _fxTouchFiredAt < 500) return;
     if (Math.hypot(e.clientX - _fxDownX, e.clientY - _fxDownY) > 8) return;
     if (performance.now() - _fxDownT > 700) return;
-    const t = e.target;
-    if (t && t.closest && t.closest('#panel,#panelToggle,.hints,footer,.zoom-bar,header,button,input,select,label,a'))
-      return;
-    const fxKind = fxClassify(e.clientX, e.clientY);
-    if (fxKind.kind === 'heart') recordHeartHit(e.clientX, e.clientY);
-    if (fxKind.kind !== 'round') sfxClick(); // 点中爱心/钻石/文字
-    spawnFirework(e.clientX, e.clientY, fxKind);
+    triggerFireworkAt(e.clientX, e.clientY, e.target);
   },
   { passive: true }
 );

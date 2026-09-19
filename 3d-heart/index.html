@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
   <title>BBYL WORLD·3D Heart</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ff3d6e' d='M12 21s-8-5.3-10-10C.6 7.4 3 4 6.5 4 8.6 4 10.6 5.2 12 7c1.4-1.8 3.4-3 5.5-3C21 4 23.4 7.4 22 11c-2 4.7-10 10-10 10z'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="style.css?v=20261030" />
@@ -420,7 +420,7 @@ python3 -m http.server 8000</pre>
         <button id="heartTexUpload" type="button" class="panel-action-btn">上传贴图…</button>
         <button id="heartTexClear" type="button" class="panel-action-btn" disabled>清除贴图</button>
       </div>
-      <p class="group-hint" id="heartTexName">未选择：爱心显示纯色；上传图片后会贴在爱心表面，颜色作为色调</p>
+      <p class="group-hint" id="heartTexName">启动时自动探测 assets/texture/default.jpg；上传图片后贴在爱心表面，点「清除贴图」会恢复默认粉红色</p>
       <input type="file" id="heartTexFile" accept="image/*" hidden />
         </details>
 
@@ -842,13 +842,17 @@ python3 -m http.server 8000</pre>
   <!-- 相册陈列室（点击左上角 BBYL 进入） -->
   <div id="galleryOverlay" hidden>
     <div class="gallery-top">
-      <div class="gallery-title">相册陈列室 <span id="galleryCount">0 / 0</span></div>
+      <button id="galleryTitle" type="button" class="gallery-title" title="返回主页面" aria-label="BBYL（返回主页面）">
+        <svg class="heart-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 21s-8-5.3-10-10C.6 7.4 3 4 6.5 4 8.6 4 10.6 5.2 12 7c1.4-1.8 3.4-3 5.5-3C21 4 23.4 7.4 22 11c-2 4.7-10 10-10 10z"/>
+        </svg>
+        <span class="gallery-title-text" aria-hidden="true">BBYL</span>
+      </button>
       <div class="gallery-modes" role="tablist" aria-label="陈列模式">
         <button id="galleryModeRing" type="button" class="mode-btn" title="相机立在圆心，照片环绕前后重叠">环视</button>
         <button id="galleryModeCircle" type="button" class="mode-btn active" title="所有照片首尾相连围成一圈，整圈收入画面">圆环</button>
         <button id="galleryModeFan" type="button" class="mode-btn" title="扑克牌扇形：点任意一张弹出居中，再点或 ESC 插回">扇形</button>
       </div>
-      <button id="galleryExit" type="button">退出</button>
     </div>
     <div class="gallery-caption" id="galleryCaption">—</div>
     <div class="gallery-empty" id="galleryEmpty">相册还是空的<br />点右侧「添加图片…」或「添加文件夹…」导入照片</div>
@@ -878,7 +882,6 @@ python3 -m http.server 8000</pre>
     <aside id="galleryPanel" class="gallery-panel">
       <div class="gallery-panel-head">
         <h3>陈列室设置</h3>
-        <button id="galleryPanelClose" type="button" class="panel-collapse-btn" title="收起侧栏">»</button>
       </div>
 
       <details class="group gallery-group" data-ggroup="quotes" open>
@@ -925,7 +928,7 @@ python3 -m http.server 8000</pre>
 
       <details class="group gallery-group" data-ggroup="photos" open>
         <summary class="group-summary"><h3>相册管理</h3></summary>
-        <p class="group-hint" id="galleryOpsHint">玩法：← / → 切换照片（圆环 = 转环切换、扇形 = 换手牌），空格 = 下一张，点缩略图跳转；<b>点当前照片进入聚焦（灯箱）</b> —— 聚焦后滚轮 / 双指 0.5×–4× 缩放（放大可超出画幅裁切看细节），点照片或 ESC 退出聚焦；ESC 或右上「退出」离开陈列室。聚焦时图注与本侧栏一起隐藏，画面只留照片和它自己的那句台词；画面底部不再放操作提示条，说明都收在这里。</p>
+        <p class="group-hint" id="galleryOpsHint">玩法：← / → 切换照片（圆环 / 环视手机端也可左右滑动切换、扇形 = 换手牌），空格 = 下一张，点缩略图跳转；<b>点当前照片进入聚焦（灯箱）</b> —— 聚焦后滚轮 / 双指 0.5×–4× 缩放（放大可超出画幅裁切看细节），点照片或 ESC 退出聚焦；ESC 或点击「BBYL」离开陈列室。聚焦时图注与本侧栏一起隐藏，画面只留照片和它自己的那句台词；画面底部不再放操作提示条，说明都收在这里。</p>
         <div class="plans-btn-row">
           <button id="galleryAddFiles" type="button" class="panel-action-btn">添加图片…</button>
           <button id="galleryAddFolder" type="button" class="panel-action-btn">添加文件夹…</button>
@@ -958,7 +961,7 @@ python3 -m http.server 8000</pre>
         <div id="galleryThumbs" class="gallery-thumbs"></div>
       </details>
     </aside>
-    <button id="galleryPanelOpen" type="button" class="panel-open-btn" hidden>陈列室设置 «</button>
+    <button id="galleryPanelClose" type="button" class="panel-collapse-btn" aria-expanded="true" title="收起侧栏" aria-label="收起陈列室侧栏">»</button>
     <input type="file" id="galleryFile" accept="image/*" multiple hidden />
     <input type="file" id="galleryFolder" webkitdirectory hidden />
   </div>
