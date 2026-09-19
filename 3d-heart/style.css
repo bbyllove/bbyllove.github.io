@@ -1,0 +1,1971 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background:
+    radial-gradient(90% 60% at 50% 0%, rgba(255, 61, 110, 0.14) 0%, transparent 60%),
+    radial-gradient(120% 90% at 50% 30%, #2a0e21 0%, #170818 48%, #0a0510 100%);
+  font-family: ui-rounded, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    -apple-system, "Segoe UI", system-ui, sans-serif;
+  color: #ffd9e6;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 自定义图片背景层：置于 WebGL 画布之后（z-index:-1），
+   inset 外扩避免模糊后边缘露底 */
+.bg-image-actions {
+  gap: 8px;
+}
+.bg-image-actions #bgImagePick {
+  flex: 1;
+}
+#bgImageFile[hidden] {
+  display: none;
+}
+
+#bgImageLayer {
+  position: fixed;
+  inset: -48px;
+  z-index: -1;
+  display: none;
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+
+#scene:active {
+  cursor: grabbing;
+}
+
+.vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(90% 90% at 50% 50%, transparent 55%, rgba(5, 2, 8, 0.55) 100%);
+}
+
+/* ---------- 标题 ---------- */
+.title {
+  position: fixed;
+  top: 28px;
+  left: 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto; /* 点击 BBYL 进入相册陈列室 */
+  cursor: pointer;
+  user-select: none;
+  z-index: 10;
+  transition: transform 0.18s ease, filter 0.18s ease;
+  animation: fade-in 1.2s ease both;
+}
+
+.heart-icon {
+  width: 30px;
+  height: 30px;
+  fill: #ff3d6e;
+  filter: drop-shadow(0 0 10px rgba(255, 61, 110, 0.8));
+  animation: beat 1.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.title:hover { transform: scale(1.05); filter: drop-shadow(0 0 10px rgba(255, 77, 141, 0.6)); }
+
+.title h1 {
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Yuanti SC', cursive;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  background: linear-gradient(120deg, #ffe3ec 20%, #ff7ba3 60%, #ff3d6e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 30px rgba(255, 61, 110, 0.25);
+}
+
+/* ---------- 设置面板开关 ---------- */
+.panel-toggle {
+  position: fixed;
+  top: 28px;
+  right: 32px;
+  z-index: 20;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 123, 163, 0.3);
+  background: rgba(30, 12, 26, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #ff9dbb;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+  animation: fade-in 1.2s ease both;
+}
+
+.panel-toggle:hover {
+  background: rgba(80, 24, 52, 0.7);
+  color: #ffd9e6;
+  transform: scale(1.06);
+}
+
+.panel-toggle svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ---------- 设置面板 ---------- */
+.panel {
+  position: fixed;
+  top: 84px;
+  right: 32px;
+  z-index: 19;
+  width: 340px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 190px);
+  overflow-y: auto;
+  padding: 18px 18px 20px;
+  border-radius: 20px;
+  background: rgba(28, 11, 24, 0.72);
+  border: 1px solid rgba(255, 123, 163, 0.25);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  transform: translateX(calc(100% + 40px));
+  opacity: 0;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+}
+
+.panel.open {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 123, 163, 0.3);
+  border-radius: 3px;
+}
+
+body:not(.panel-open) .hints,
+body:not(.panel-open) .zoom-bar {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.panel-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #ffe3ec;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-action-btn {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 123, 163, 0.4);
+  border-radius: 9px;
+  background: rgba(255, 123, 163, 0.12);
+  color: #ff9dbb;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.panel-action-btn:hover {
+  background: rgba(255, 123, 163, 0.28);
+  color: #ffd9e6;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 9px;
+  background: rgba(255, 123, 163, 0.12);
+  color: #ff9dbb;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 123, 163, 0.28);
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.group {
+  padding: 12px 14px 12px;
+  border: 1px solid rgba(255, 123, 163, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  margin-top: 10px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+/* 展开的块更亮一点，块与块区分更明显 */
+details.group[open] {
+  border-color: rgba(255, 123, 163, 0.34);
+  background: rgba(255, 255, 255, 0.07);
+}
+details.group[open] > summary.group-summary {
+  margin: -2px -2px 0;
+  padding: 2px 2px 0;
+}
+
+.group h3 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #d78ba6;
+  margin-bottom: 10px;
+}
+
+/* ---------- 折叠分组（29）：details/summary ---------- */
+summary.group-summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  outline: none;
+}
+summary.group-summary::-webkit-details-marker {
+  display: none;
+}
+summary.group-summary::after {
+  content: '';
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-right: 1.6px solid #ff9dbb;
+  border-bottom: 1.6px solid #ff9dbb;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+  opacity: 0.75;
+  flex: none;
+}
+details.group[open] > summary.group-summary::after {
+  transform: rotate(225deg);
+}
+summary.group-summary h3 {
+  margin-bottom: 0;
+}
+details.group[open] > summary.group-summary h3 {
+  margin-bottom: 10px;
+}
+summary.group-summary:hover h3 {
+  color: #ffb3c6;
+}
+
+.text-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 123, 163, 0.3);
+  background: rgba(12, 5, 11, 0.6);
+  color: #ffe3ec;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 10px;
+}
+
+.text-input:focus {
+  border-color: #ff5c8a;
+  box-shadow: 0 0 0 3px rgba(255, 92, 138, 0.18);
+}
+
+.text-input::placeholder {
+  color: rgba(255, 185, 205, 0.35);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.font-select {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 26px 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 123, 163, 0.3);
+  background: rgba(12, 5, 11, 0.6)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff9dbb' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")
+    no-repeat right 8px center / 13px;
+  color: #ffe3ec;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.font-select option {
+  background: #24101e;
+  color: #ffe3ec;
+}
+
+.slider {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: #ff5c8a;
+  cursor: pointer;
+}
+
+.slider-val {
+  font-size: 12px;
+  color: #d78ba6;
+  width: 30px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 形状选择 ---------- */
+.shape-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.diamond-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.shape-grid button,
+.diamond-presets button {
+  padding: 9px 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 123, 163, 0.28);
+  background: rgba(12, 5, 11, 0.5);
+  color: #f5b9cd;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.shape-grid button:hover,
+.diamond-presets button:hover {
+  background: rgba(255, 92, 138, 0.15);
+  border-color: rgba(255, 123, 163, 0.5);
+}
+
+.shape-grid button.active,
+.diamond-presets button.active {
+  background: linear-gradient(135deg, rgba(255, 61, 110, 0.85), rgba(255, 92, 138, 0.65));
+  border-color: #ff5c8a;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(255, 61, 110, 0.35);
+}
+
+/* ---------- 颜色选择 ---------- */
+.color-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #f5b9cd;
+  cursor: pointer;
+}
+
+input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 52px;
+  height: 30px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 9px;
+}
+
+input[type="color"]::-moz-color-swatch {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 9px;
+}
+
+/* ---------- 底部操作提示 ---------- */
+.hints {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: rgba(30, 12, 26, 0.55);
+  border: 1px solid rgba(255, 123, 163, 0.22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+  color: #f5b9cd;
+  pointer-events: none;
+  z-index: 10;
+  animation: fade-in-up 1.2s 0.3s ease both;
+  white-space: nowrap;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 123, 163, 0.25);
+}
+
+.keys {
+  display: inline-flex;
+  gap: 4px;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(255, 123, 163, 0.22), rgba(255, 123, 163, 0.08));
+  border: 1px solid rgba(255, 123, 163, 0.4);
+  border-bottom-width: 2px;
+  color: #ffd9e6;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.pinch-icon {
+  width: 18px;
+  height: 18px;
+  color: #ff9dbb;
+}
+
+/* ---------- 动画 ---------- */
+@keyframes beat {
+  0%, 100% { transform: scale(1); }
+  12%      { transform: scale(1.22); }
+  24%      { transform: scale(1); }
+  36%      { transform: scale(1.14); }
+  48%      { transform: scale(1); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 720px) {
+  .title { top: 20px; left: 20px; }
+  .title h1 { font-size: 20px; }
+  .panel-toggle { top: 20px; right: 20px; }
+  .panel { top: 74px; right: 16px; max-height: calc(100vh - 170px); }
+  .hints { gap: 10px; padding: 10px 16px; font-size: 12px; bottom: 18px; }
+}
+
+/* ---------- 圆润程度 / 背景 ---------- */
+.roundness-row {
+  margin-top: 10px;
+}
+
+.row-label {
+  font-size: 13px;
+  color: #f5b9cd;
+  white-space: nowrap;
+}
+
+.roundness-row.disabled {
+  opacity: 0.35;
+}
+
+.roundness-row.disabled .slider {
+  pointer-events: none;
+}
+
+.bg-colors {
+  margin-top: 10px;
+}
+
+/* ---------- 底部缩放控制条 ---------- */
+.zoom-bar {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(30, 12, 26, 0.55);
+  border: 1px solid rgba(255, 123, 163, 0.22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  animation: fade-in 1.2s 0.5s ease both;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.zoom-bar input[type="range"] {
+  width: 140px;
+  accent-color: #ff5c8a;
+  cursor: pointer;
+}
+
+.zoom-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 123, 163, 0.35);
+  border-radius: 50%;
+  background: rgba(255, 123, 163, 0.1);
+  color: #ff9dbb;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.zoom-btn:hover {
+  background: rgba(255, 123, 163, 0.32);
+  color: #ffd9e6;
+}
+
+.zoom-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.zoom-label {
+  font-size: 12px;
+  color: #d78ba6;
+  width: 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 720px) {
+  .zoom-bar {
+    right: 16px;
+    bottom: 72px;
+  }
+  .zoom-bar input[type="range"] {
+    width: 96px;
+  }
+}
+
+/* ---------- 钻石按钮占满整行 / 禁用态 ---------- */
+.shape-grid button:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+input[type="color"]:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ---------- 钻石参数 ---------- */
+.param-row {
+  margin-top: 10px;
+}
+
+.param-row input[type="color"] {
+  margin-left: auto;
+}
+
+.group.disabled {
+  opacity: 0.45;
+  cursor: pointer;
+  position: relative;
+  transition: opacity 0.2s ease;
+}
+
+.group.disabled:hover {
+  opacity: 0.75;
+}
+
+.group.disabled input,
+.group.disabled button {
+  cursor: pointer;
+}
+
+.group-tip {
+  font-size: 11px;
+  font-weight: normal;
+  color: #ff85a8;
+  opacity: 0.85;
+  margin-left: 4px;
+}
+.sub-title {
+  margin: 12px 0 8px;
+  color: #d78ba6;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+}
+
+.compact-grid,
+.export-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.export-grid {
+  margin-bottom: 10px;
+}
+
+.export-grid button {
+  font-size: 12px;
+  padding: 8px 4px;
+}
+
+.export-row.disabled,
+.export-row.disabled .slider {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.music-file {
+  margin-left: auto;
+  width: 100%;
+  min-width: 0;
+  max-width: 180px;
+  color: #ff9dbb;
+  font-size: 12px;
+}
+.music-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #f5b9cd;
+}
+.group:not(.disabled) .group-tip {
+  display: none;
+}
+
+
+/* ---------- 运行时回退提示（main.js 未能加载时） ---------- */
+/* 关键：尊重 hidden 属性 —— 否则上面的 display:flex 会覆盖 [hidden]{display:none}，
+   导致遮罩始终渲染并拦截整页点击（滑杆/按钮看起来都「坏了」）。 */
+.runtime-fallback[hidden] { display: none !important; }
+
+.runtime-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(8, 4, 10, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.runtime-card {
+  max-width: 420px;
+  width: 100%;
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #2a0e21, #170818);
+  border: 1px solid rgba(255, 123, 163, 0.35);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+  color: #ffd9e6;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+/* 错误弹窗允许选中文字，方便复制错误信息 */
+.runtime-card,
+.runtime-card * {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: auto;
+}
+
+.runtime-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #ff9dbb;
+}
+
+.runtime-error {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(255, 92, 138, 0.14);
+  border: 1px solid rgba(255, 92, 138, 0.35);
+  color: #ffd0de;
+  font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+}
+
+.runtime-card p { margin: 8px 0; }
+.runtime-card code {
+  background: rgba(255, 123, 163, 0.16);
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 12.5px;
+}
+.runtime-card pre {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(255, 123, 163, 0.2);
+  color: #ffe3ec;
+  font-size: 12.5px;
+  line-height: 1.45;
+  overflow-x: auto;
+  white-space: pre;
+}
+.runtime-card a { color: #ff7ba3; }
+.runtime-error[hidden] { display: none !important; }
+
+/* 纯净模式：隐藏全部 UI，只留画布（快捷键 H） */
+body.zen-mode .title,
+body.zen-mode .panel-toggle,
+body.zen-mode .panel,
+body.zen-mode .hints,
+body.zen-mode .zoom-bar,
+body.zen-mode .fps-meter {
+  display: none !important;
+}
+
+/* FPS 帧率显示（31） */
+.fps-meter {
+  position: fixed;
+  left: 32px;
+  top: 72px;
+  z-index: 10;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: rgba(10, 4, 10, 0.55);
+  border: 1px solid rgba(123, 255, 163, 0.25);
+  color: #9fffb0;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+.fps-meter[hidden] {
+  display: none;
+}
+
+.row[hidden] {
+  display: none !important;
+}
+
+/* 导出 GIF 选项下拉 */
+.export-select {
+  margin-left: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 123, 163, 0.4);
+  background: rgba(255, 123, 163, 0.12);
+  color: #ffd9e6;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+.export-select option {
+  background: #2a1220;
+  color: #ffd9e6;
+}
+
+/* 烟花文字内容输入框 */
+.char-input {
+  margin-left: auto;
+  width: 96px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 123, 163, 0.4);
+  background: rgba(12, 5, 11, 0.5);
+  color: #ffd9e6;
+  font-family: inherit;
+  font-size: 14px;
+  text-align: center;
+  outline: none;
+}
+.char-input:focus {
+  border-color: #ff5c8a;
+}
+.color-rows[hidden] { display: none !important; }
+.meteor-sub[hidden] { display: none !important; }
+.runtime-card kbd { background: rgba(255, 123, 163, 0.18); }
+
+
+/* ---------- 流星效果子区 ---------- */
+.meteor-sub {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 123, 163, 0.16);
+}
+.meteor-sub-title {
+  font-size: 13px;
+  color: #ff9dbb;
+  margin-bottom: 2px;
+  letter-spacing: 0.5px;
+}
+.fx-group-title {
+  font-size: 11px;
+  color: #ffb3c6;
+  margin: 20px 0 4px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 123, 163, 0.14);
+  letter-spacing: 0.6px;
+  opacity: 0.9;
+}
+.group-summary + .fx-group-title {
+  margin-top: 2px;
+  padding-top: 0;
+  border-top: none;
+}
+
+
+/* ---------- 点击烟花开关 ---------- */
+.fireworks-sub {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 123, 163, 0.16);
+}
+.check-row {
+  margin-top: 8px;
+  cursor: pointer;
+}
+#textGradientDir {
+  margin-top: 10px;
+}
+.check-row input[type="checkbox"] {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  accent-color: #ff5c8a;
+  cursor: pointer;
+}
+
+/* ---------- 累计彩蛋叠层：隐藏舞台 / 自定义字幕 / 自定义图片 ---------- */
+#stageFx { position: fixed; inset: 0; pointer-events: none; z-index: 17; overflow: hidden; }
+#stageFx .stage-dim {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 62%, rgba(0, 0, 0, 0) 30%, rgba(5, 0, 10, 0.55) 100%);
+  animation: stageDim 4.6s both;
+}
+@keyframes stageDim { 0% { opacity: 0; } 8% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; } }
+#stageFx .stage-beam {
+  position: absolute; top: -12%; left: 50%; width: 16vmax; height: 130%;
+  transform-origin: 50% 0; mix-blend-mode: screen; filter: blur(2px); opacity: 0.85;
+  animation: beamSweep 2.3s ease-in-out infinite alternate;
+}
+#stageFx .beam-a { background: linear-gradient(to bottom, rgba(255, 80, 160, 0.5), rgba(255, 80, 160, 0) 75%); margin-left: -30vmax; }
+#stageFx .beam-b { background: linear-gradient(to bottom, rgba(120, 190, 255, 0.5), rgba(120, 190, 255, 0) 75%); margin-left: -8vmax; animation-delay: 0.35s; }
+#stageFx .beam-c { background: linear-gradient(to bottom, rgba(255, 220, 130, 0.5), rgba(255, 220, 130, 0) 75%); margin-left: 14vmax; animation-delay: 0.7s; }
+@keyframes beamSweep { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
+#stageFx .stage-floor {
+  position: absolute; left: 50%; bottom: -14vh; width: 120vw; height: 34vh;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(255, 90, 160, 0.4), rgba(255, 90, 160, 0) 70%);
+  animation: stageDim 4.6s both;
+}
+
+#subtitleFx {
+  position: fixed; left: 50%; top: 16%; transform: translateX(-50%);
+  z-index: 17; pointer-events: none; white-space: nowrap;
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Yuanti SC', cursive;
+  font-weight: 700; font-size: clamp(22px, 4.4vw, 46px); letter-spacing: 0.06em; color: #fff;
+  text-shadow: 0 0 14px rgba(255, 80, 160, 0.9), 0 0 40px rgba(255, 45, 85, 0.55), 0 2px 0 rgba(0, 0, 0, 0.35);
+  animation: subtitlePop 4.3s both;
+}
+@keyframes subtitlePop {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+  10% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  16% { transform: translateX(-50%) scale(1); }
+  82% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) scale(1) translateY(-14px); }
+}
+
+#imageFx { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 17; pointer-events: none; }
+#imageFx[hidden] { display: none; }
+#imageFx img {
+  max-width: min(64vw, 520px); max-height: 52vh; border-radius: 14px;
+  border: 3px solid rgba(255, 255, 255, 0.9); background: #fff;
+  box-shadow: 0 14px 60px rgba(255, 45, 85, 0.5), 0 0 0 6px rgba(255, 255, 255, 0.14);
+  animation: imagePop 5.2s both;
+}
+@keyframes imagePop {
+  0% { opacity: 0; transform: scale(0.7) rotate(-3deg); }
+  9% { opacity: 1; transform: scale(1.04) rotate(1deg); }
+  14% { transform: scale(1) rotate(0deg); }
+  86% { opacity: 1; }
+  100% { opacity: 0; transform: scale(0.96); }
+}
+
+.easter-image-row { display: flex; align-items: center; gap: 8px; }
+.easter-thumb { width: 34px; height: 34px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.35); }
+.easter-preview-btn { width: 100%; margin-top: 4px; }
+.group-hint { margin: 8px 2px 0; font-size: 11px; line-height: 1.6; color: rgba(255, 255, 255, 0.45); }
+
+/* ---------- 方案与备份：按钮行 / 方案列表 ---------- */
+.plans-btn-row { display: flex; gap: 8px; }
+.plans-btn-row .panel-action-btn { flex: 1; }
+.plan-save-btn { width: 100%; margin-top: 4px; }
+.plan-list { display: flex; flex-direction: column; gap: 6px; }
+.plan-row {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.plan-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.plan-name { font-size: 12px; color: #ffd7e2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-time { font-size: 10px; color: rgba(255, 255, 255, 0.4); }
+.plan-actions { display: flex; gap: 6px; }
+.plan-btn { padding: 3px 10px; font-size: 11px; }
+
+/* ---------- 侧边栏分类标签 ---------- */
+.cat-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 4px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.42);
+}
+.cat-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 123, 163, 0.35), rgba(255, 123, 163, 0));
+}
+
+/* ---------- 面板头部按钮紧凑化（展开 / 收起 / 重置 并排不换行） ---------- */
+.panel-header { margin-bottom: 4px; }
+.panel-header h2 { white-space: nowrap; font-size: 15px; }
+.panel-actions { gap: 6px; }
+.panel-actions .panel-action-btn {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* ---------- 背景图片链接导入行 ---------- */
+.bg-url-row { display: flex; align-items: center; gap: 8px; }
+.bg-url-row .text-input { flex: 1; min-width: 0; }
+.bg-url-row .panel-action-btn { flex: none; }
+
+/* ---------- 首次打开引导提示 ---------- */
+.first-hint {
+  position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%);
+  z-index: 18; pointer-events: none; white-space: nowrap;
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Yuanti SC', cursive;
+  font-size: 15px; font-weight: 700; letter-spacing: 0.08em; color: #fff;
+  padding: 9px 18px; border-radius: 999px;
+  background: rgba(255, 45, 85, 0.32);
+  border: 1px solid rgba(255, 150, 190, 0.55);
+  backdrop-filter: blur(6px);
+  text-shadow: 0 0 10px rgba(255, 80, 160, 0.8);
+  animation: hintIn 0.9s both;
+  transition: opacity 0.6s;
+}
+.first-hint.bye { opacity: 0; }
+@keyframes hintIn {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ================================================================
+ * 性能：低帧率建议提示条（44）—— 浮在顶部，只建议、不自动切换
+ * ================================================================ */
+.perf-notice {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(92vw, 640px);
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(32, 10, 26, 0.88);
+  border: 1px solid rgba(255, 120, 170, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5);
+  color: #ffd9e7;
+  font-size: 13px;
+  line-height: 1.5;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.perf-notice[hidden] { display: none; }
+.perf-notice-text { flex: 1 1 auto; }
+.perf-notice button {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 120, 170, 0.5);
+  background: rgba(255, 90, 150, 0.16);
+  color: #ffd9e7;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+.perf-notice button:hover { background: rgba(255, 90, 150, 0.34); }
+.perf-notice #perfNoticeYes {
+  background: rgba(255, 77, 141, 0.85);
+  border-color: transparent;
+  color: #fff;
+}
+.perf-notice #perfNoticeYes:hover { background: rgba(255, 77, 141, 1); }
+@media (max-width: 560px) {
+  .perf-notice { flex-wrap: wrap; }
+}
+
+/* ================================================================
+ * 相册陈列室（点击左上角 BBYL 进入）
+ * ================================================================ */
+body.gallery-open .title,
+body.gallery-open .panel-toggle,
+body.gallery-open .panel,
+body.gallery-open .hints,
+body.gallery-open .zoom-bar,
+body.gallery-open .fps-meter,
+body.gallery-open .first-hint,
+body.gallery-open .perf-notice { display: none !important; }
+
+#galleryOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+#galleryOverlay[hidden] { display: none; }
+/* 聚焦（灯箱）模式：隐藏右侧管理栏，照片整屏居中 */
+body.gallery-focus #galleryPanel { display: none; }
+/* 聚焦（灯箱）模式（50）：图注（含文件名）退场 —— 灯箱里只留画面本身与
+   「这张自己的那句台词」。图注是 absolute 定位、不占文档流，藏掉不影响任何其它
+   元素的位置；退出聚焦自动恢复（选择器只挂在 body.gallery-focus 上）。
+   底部操作提示条（.gallery-hintbar）已随 50 整体退役：正常 / 聚焦都不再出现，
+   玩法说明收进侧栏 #galleryOpsHint。左下角那枚烧进占位纹理的文件名标签
+   同样随 50 从生成脚本去掉（见 tools/make_placeholders.py） */
+body.gallery-focus .gallery-caption { display: none; }
+#galleryOverlay button,
+#galleryOverlay .gallery-panel,
+#galleryOverlay .gallery-thumbs { pointer-events: auto; }
+
+.gallery-top {
+  position: absolute;
+  top: 18px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.gallery-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #ffd9e7;
+  text-shadow: 0 2px 14px rgba(255, 77, 141, 0.55);
+  user-select: text;
+}
+.gallery-title span {
+  margin-left: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  opacity: 0.85;
+}
+.demo-notice {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 7px 18px;
+  border-radius: 999px;
+  background: rgba(20, 6, 16, 0.72);
+  border: 1px solid rgba(255, 120, 170, 0.35);
+  color: rgba(255, 217, 231, 0.9);
+  font-size: 12.5px;
+  letter-spacing: 1px;
+  pointer-events: none;
+  z-index: 60;
+  user-select: text;
+}
+.demo-notice[hidden] { display: none; }
+.gallery-modes {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(32, 10, 26, 0.72);
+  border: 1px solid rgba(255, 120, 170, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.mode-btn {
+  padding: 5px 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255, 217, 231, 0.75);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+.mode-btn:hover { color: #fff; background: rgba(255, 77, 141, 0.25); }
+.mode-btn.active {
+  background: linear-gradient(135deg, #ff4d8d, #ff8fb3);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(255, 77, 141, 0.5);
+}
+#galleryExit {
+  padding: 8px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 120, 170, 0.55);
+  background: rgba(255, 77, 141, 0.82);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+#galleryExit:hover { background: rgba(255, 77, 141, 1); transform: translateY(-1px); }
+
+.gallery-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  max-width: 70vw;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(32, 10, 26, 0.7);
+  border: 1px solid rgba(255, 120, 170, 0.3);
+  color: #ffd9e7;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: text;
+}
+.gallery-empty {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: rgba(255, 217, 231, 0.8);
+  font-size: 16px;
+  line-height: 2;
+  letter-spacing: 1px;
+  user-select: text;
+}
+.gallery-empty[hidden] { display: none; }
+
+.gallery-panel {
+  position: absolute;
+  top: 70px;
+  right: 18px;
+  width: 272px;
+  max-height: calc(100vh - 170px);
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(32, 10, 26, 0.82);
+  border: 1px solid rgba(255, 120, 170, 0.3);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gallery-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.panel-collapse-btn {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 120, 170, 0.4);
+  background: rgba(255, 77, 141, 0.22);
+  color: #ffd9e7;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.panel-collapse-btn:hover { background: rgba(255, 77, 141, 0.5); color: #fff; }
+.panel-open-btn {
+  position: absolute;
+  top: 70px;
+  right: 18px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 120, 170, 0.45);
+  background: rgba(32, 10, 26, 0.82);
+  color: #ffd9e7;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.panel-open-btn:hover { background: rgba(255, 77, 141, 0.4); color: #fff; }
+body.gallery-panel-hidden #galleryPanel { display: none; }
+.gallery-panel-head h3 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: #ffd9e7;
+}
+.gallery-clear-all {
+  background: rgba(120, 30, 60, 0.5) !important;
+  border-color: rgba(255, 90, 120, 0.4) !important;
+}
+.gallery-thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.gallery-thumb {
+  position: relative;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  aspect-ratio: 1 / 1;
+}
+.gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.gallery-thumb.active { border-color: #ff4d8d; box-shadow: 0 0 12px rgba(255, 77, 141, 0.6); }
+.gallery-thumb-del {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: rgba(20, 6, 16, 0.78);
+  color: #ffd9e7;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.gallery-thumb:hover .gallery-thumb-del { opacity: 1; }
+
+/* ---------- 侧栏模块：台词轮播 / 相册管理，各自可展开与收起 ---------- */
+.gallery-group {
+  margin-top: 0;              /* 侧栏用 flex gap 控制间距，去掉 .group 的外边距 */
+  padding: 10px 11px 12px;
+}
+.gallery-group h3 {
+  font-size: 12.5px;
+  letter-spacing: 1.8px;
+  color: #ffc9dd;
+}
+.gallery-group > .check-row:first-of-type { margin-top: 0; }
+.gallery-group .gallery-clear-all { width: 100%; margin-top: 8px; }
+.gallery-group .gallery-thumbs { margin-top: 10px; }
+
+/* 台词文本框：一行一句，多行滚动编辑，可直接拖高 */
+.quote-textarea {
+  display: block;
+  width: 100%;
+  min-height: 92px;
+  max-height: 260px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 123, 163, 0.3);
+  background: rgba(12, 5, 11, 0.6);
+  color: #ffe3ec;
+  font-size: 12.5px;
+  line-height: 1.65;
+  font-family: inherit;         /* js 同步成所选字体，编辑时即可预览 */
+  outline: none;
+  resize: vertical;
+  user-select: text;
+  -webkit-user-select: text;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.quote-textarea:focus {
+  border-color: #ff5c8a;
+  box-shadow: 0 0 0 3px rgba(255, 92, 138, 0.18);
+}
+.quote-textarea::placeholder { color: rgba(255, 185, 205, 0.35); }
+.quote-actions { margin-top: 10px; }
+
+/* ---------- 台词轮播叠层：顶栏与照片之间的空白带 ----------
+   水平：left/right 都是 0 + 台词槽各自 justify-content:center → 与照片、底部图注
+   同一根屏幕中轴线（不再因为给侧栏让位而整体偏左）。
+   垂直：top / height 由 js 每帧按「顶栏下沿 → 当前照片可见区上沿」写入
+   （--gq-top / --gq-h），台词只在中间偏上的这条空白带里上下居中，绝不压到照片。
+   宽度：--gq-side 是给右侧侧栏留的让位量，台词块最宽 = 屏宽 − 2×让位量，
+   于是既保持居中，又不会滑到侧栏底下。
+   层数：两层台词槽（.gallery-quote-slot）都 absolute inset:0 铺满叠层、各自居中，
+   于是两层的中心点重合 —— 「上浮交替」里当前句上移淡出、下一句同时从下方浮现
+   需要两层同时在动；另外两种效果只用一层，另一层留空（data-gq-state=idle → 透明）。
+   两槽的宽度都等于叠层宽度，<p> 的 max-width 百分比基准与单层时代完全一致，
+   js 读它的算得值当照片让位水平窗口（quoteSpanHalfPx）不受影响。 */
+.gallery-quotes {
+  --gq-top: 62px;
+  --gq-h: 150px;
+  --gq-panel-side: 300px;       /* 侧栏 272 宽 + 右距 18 + 10 缓冲 */
+  --gq-side: clamp(12px, calc(50vw - 90px), var(--gq-panel-side));
+  --gq-size: 36px;              /* js 按所选字号写到每层台词上（空间不足时自动收小） */
+  --gq-clamp: 4;                /* js 按空白带高度写入的可见行数（超出省略号） */
+  /* 下面一组是「过场节奏」，全由 js 按所选效果 + 间隔写入，CSS 只留能直接跑的
+     兜底值。动画时长与 js 相位机取的是同一份数字（timings()），两边不会走岔：
+     --gq-in / --gq-out    淡入淡出：进场 / 出场时长
+     --gq-swap / --gq-rise 上浮交替：过场时长 / 上移位移（两层共用，位移对称）
+     --gq-tot / --gq-cdur  烟消云散：整体相位时长 / 单字时长
+     （逐字的错峰延迟 --gq-d / --gq-d2 与随机漂移 --gq-dx/dy/sc/rot 由 js
+       直接写在每个字的 span 上，见 galleryquotes.js 的 fillSlot） */
+  --gq-fade-dy: 12px;           /* 淡入淡出的位移量（js 按带内余量写到每层台词上，收小不越带） */
+  --gq-in: 0.5s;
+  --gq-out: 0.6s;
+  --gq-swap: 1.2s;
+  --gq-rise: 60px;
+  --gq-tot: 1.6s;
+  --gq-cdur: 0.9s;
+  --gq-mask: 18px;              /* 上浮交替过场时裁切边的柔边宽度（js 按带内余量给，不碰停稳的台词） */
+  position: absolute;
+  top: var(--gq-top);
+  left: 0;
+  right: 0;
+  height: var(--gq-h);
+  display: flex;
+  align-items: center;          /* 空白带内垂直居中 */
+  justify-content: center;      /* 屏幕中轴线上水平居中 */
+  pointer-events: none;         /* 台词不吃点击，照片照旧可点可聚焦 */
+  transition: opacity 0.3s ease;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+.gallery-quotes[hidden] { display: none; }
+body.gallery-panel-hidden .gallery-quotes { --gq-side: 12px; }
+/* 聚焦（灯箱）模式：照片铺满画面，台词淡出让位，退出聚焦自动恢复 */
+body.gallery-focus .gallery-quotes { opacity: 0; }
+
+/* 台词槽：两层都铺满叠层并各自居中 → 中心重合（绝对定位也保证宽度确定，
+   <p> 的 max-width 百分比能正常解析成 px 给 js 读） */
+.gallery-quote-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;                 /* flex 项默认不肯缩到内容宽以下，长句会把槽撑出去 */
+}
+/* 上浮交替的过场（进场 / 交叉）期间，台词槽开裁切 + 上下柔边遮罩：
+   ① 于是位移可以按「两句半高之和 + 一道缝隙」给足，真正做到「当前句上移淡出的
+      同时，下一句从下方浮现并升回原位」，不必再被空白带高度压小 ——
+      大字号、矮窗口、照片把带子挤窄的场景照样演得出来；
+   ② 裁切边正好就是空白带的上下沿：下沿在最高那张照片上沿之上 12px，
+      上沿在顶栏之下 → 浮现 / 上移途中的台词绝不可能压到照片或糊到顶栏上，
+      这条是构造性成立的（不挑字号与窗口）；
+   ③ 柔边宽度 --gq-mask 由 js 取「台词块到带边的余量」与 18px 的较小值 ——
+      遮罩只吃掉那段空白余量，绝不碰到停稳的台词本身，所以过场结束摘掉遮罩
+      也不会看到亮度跳一下；裁切化成柔边后，切口看起来像「从雾里浮上来 / 散进雾里」。
+   （js 会显式写 data-gq-clip，:has() 只是再兜一层，老浏览器少这条也不影响 ②） */
+.gallery-quote-slot[data-gq-clip="1"],
+.gallery-quote-slot:has(.gallery-quote-line[data-gq-state^="rise-"]) {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom,
+    transparent 0, #000 var(--gq-mask, 18px),
+    #000 calc(100% - var(--gq-mask, 18px)), transparent 100%);
+  mask-image: linear-gradient(to bottom,
+    transparent 0, #000 var(--gq-mask, 18px),
+    #000 calc(100% - var(--gq-mask, 18px)), transparent 100%);
+}
+
+.gallery-quote-line {
+  --gq-pad: 9px;                /* 上下内边距基准（窄屏另给 7px） */
+  max-width: calc(100% - 2 * var(--gq-side));   /* 居中且不滑到侧栏底下 */
+  margin: 0;
+  padding: var(--gq-pad) 22px;
+  border-radius: 22px;
+  background: rgba(26, 8, 20, 0.34);
+  border: 1px solid rgba(255, 120, 170, 0.22);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.28);
+  color: #fff2f7;
+  font-family: inherit;         /* 字体由 js 写在叠层上，两层一起继承（下拉框改字体即生效） */
+  /* --gq-size 由 js 写：先按用户所选字号，空间不够再自动收到刚好放得下（见 fitFont） */
+  font-size: min(var(--gq-size), 9vw);
+  font-weight: 700;
+  line-height: 1.55;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6), 0 0 24px rgba(255, 77, 141, 0.4);
+  word-break: break-word;
+  opacity: 0;                   /* 明暗全由下面的相位动画驱动（idle = 空槽不显示） */
+  /* 行数兜底：--gq-clamp 由 js 按空白带高度写（默认 4 行），
+     配合上面的自动收字号，台词块高度必定 ≤ 空白带 → 绝不盖住照片 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--gq-clamp, 4);
+  line-clamp: var(--gq-clamp, 4);
+  overflow: hidden;
+}
+
+/* ---------- 台词相位机：data-gq-state 由 js 每帧推进的相位写入 ----------
+   idle  空槽（不显示）    hold  停稳在原位（进场动画落定的稳态，也是兜底）
+   fade-in / fade-out      效果一 · 淡入淡出
+   rise-in / rise-out      效果二 · 上浮交替（两层同时跑，一进一出）
+   smoke-in / smoke-out    效果三 · 烟消云散（整块底板 + 逐字）
+   动画一律 fill-mode:both：相位切换与 js 走时用的是同一份时长，
+   掉帧 / 切后台回来都不会半路卡在透明态。 */
+.gallery-quote-line[data-gq-state="hold"] { opacity: 1; }
+
+/* 效果一 · 淡入淡出（原效果）：原地淡入 → 停留 → 原地淡出，一句走完再换下一句。
+   位移量走 --gq-fade-dy（上限 12px，进场下落 12、出场上飘 ≈10，与原样一致）；
+   js 的 fitFont 会在「台词块几乎撑满空白带」的极矮窗口里按剩余余量把它收小，
+   于是淡入淡出也跟另外两种效果一样，过场全程都不越空白带（不压照片、不糊顶栏） */
+.gallery-quote-line[data-gq-state="fade-in"] { animation: gqFadeIn var(--gq-in) ease-out both; }
+.gallery-quote-line[data-gq-state="fade-out"] { animation: gqFadeOut var(--gq-out) ease-in both; }
+@keyframes gqFadeIn {
+  from { opacity: 0; transform: translateY(var(--gq-fade-dy, 12px)) scale(0.965); filter: blur(6px); }
+  to   { opacity: 1; transform: translateY(0) scale(1);                          filter: blur(0); }
+}
+@keyframes gqFadeOut {
+  from { opacity: 1; transform: translateY(0) scale(1);         filter: blur(0); }
+  to   { opacity: 0; transform: translateY(calc(-0.83 * var(--gq-fade-dy, 12px))) scale(1.015); filter: blur(4px); }
+}
+
+/* 效果二 · 上浮交替：当前句慢慢往上移并淡出，同一时间下一句从下方浮现、
+   慢慢升回到上一句原来所在的位置。两层用同一条缓动曲线 + 同一个位移量
+   --gq-rise → 位移处处对称，--gq-rise ≥ 两句半高之和时全程互不重叠
+   （js 的 applyRiseVars 正是按这个条件给值；空白带太矮才收到「不探出空白带」
+     的上限，此时两句会轻微交叠，靠透明度渐变兜住观感） */
+/* 进场（rise-enter，进陈列室后的第一句 / 换效果后重起）与交叉时的进场层
+   共用同一条上浮曲线；位移量 --gq-rise 由 js 按两句实际高度算好后写在叠层上 */
+.gallery-quote-line[data-gq-state="rise-enter"] { animation: gqRiseIn var(--gq-swap) ease-in-out both; }
+.gallery-quote-line[data-gq-state="rise-in"] { animation: gqRiseIn var(--gq-swap) ease-in-out both; }
+.gallery-quote-line[data-gq-state="rise-out"] { animation: gqRiseOut var(--gq-swap) ease-in-out both; }
+@keyframes gqRiseIn {
+  0%   { opacity: 0;    transform: translate3d(0, var(--gq-rise), 0);          filter: blur(7px); }
+  40%  { opacity: 0.55; }
+  100% { opacity: 1;    transform: translate3d(0, 0, 0);                       filter: blur(0); }
+}
+@keyframes gqRiseOut {
+  0%   { opacity: 1;    transform: translate3d(0, 0, 0);                        filter: blur(0); }
+  60%  { opacity: 0.45; }
+  100% { opacity: 0;    transform: translate3d(0, calc(-1 * var(--gq-rise)), 0); filter: blur(5px); }
+}
+
+/* 效果三 · 烟消云散：当前句逐字飘散成烟（药丸底板跟着淡出），
+   下一句在原地逐字凝聚浮现。字符 span 由 js 拆好：.gq-c 单字、
+   .gq-w 把拉丁 / 数字词整体包住（不在单词中间断行），每个字带一组
+   随机漂移（--gq-dx / --gq-dy / --gq-sc / --gq-rot，单位 em → 跟着字号缩放）
+   与错峰延迟（进场 --gq-d 自中心向两侧、散场 --gq-d2 自左向右像被风吹走）。
+   错峰上限 + 单字时长 = --gq-tot，正好是 js 那个相位走的秒数。
+   超长句不逐字拆（data-gq-chars="0"）→ 整块一起雾化飘散，
+   免得一句几百个字时上百个 blur 滤镜动画同跑拖垮帧率；
+   整块这一路只飘移 + 模糊、不放大（放大会连横向一起胀出去，长句本来就快占满
+   可用宽度），飘走的 0.2em 由 js 的 fitFont 预留（SMOKE_WHOLE_LIFT），
+   所以「台词过场中也不越空白带、绝不压到照片」在这条退路上照样成立。 */
+.gallery-quote-line[data-gq-state="smoke-in"] { animation: gqPillIn var(--gq-tot) ease-out both; }
+.gallery-quote-line[data-gq-state="smoke-out"] { animation: gqPillOut var(--gq-tot) ease-in both; }
+.gallery-quote-line[data-gq-state="smoke-in"] .gq-c {
+  animation: gqCharIn var(--gq-cdur) ease-out var(--gq-d, 0s) both;
+}
+.gallery-quote-line[data-gq-state="smoke-out"] .gq-c {
+  animation: gqCharOut var(--gq-cdur) ease-in var(--gq-d2, 0s) both;
+}
+.gallery-quote-line[data-gq-chars="0"][data-gq-state="smoke-in"] {
+  animation: gqSmokeWholeIn var(--gq-tot) ease-out both;
+}
+.gallery-quote-line[data-gq-chars="0"][data-gq-state="smoke-out"] {
+  animation: gqSmokeWholeOut var(--gq-tot) ease-in both;
+}
+@keyframes gqPillIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gqPillOut {
+  0%   { opacity: 1; }
+  30%  { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+@keyframes gqCharIn {
+  0% {
+    opacity: 0; filter: blur(8px);
+    transform: translate3d(calc(var(--gq-dx, 0em) * 0.5), calc(var(--gq-dy, 0em) * 0.45), 0)
+      rotate(calc(var(--gq-rot, 0deg) * -0.5)) scale(1.35);
+  }
+  55% { opacity: 0.85; filter: blur(2.4px); }
+  100% { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+}
+@keyframes gqCharOut {
+  0% { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  25% { opacity: 0.92; filter: blur(1.6px); }
+  100% {
+    opacity: 0; filter: blur(9px);
+    transform: translate3d(var(--gq-dx, 0em), var(--gq-dy, 0em), 0)
+      rotate(var(--gq-rot, 0deg)) scale(var(--gq-sc, 1.4));
+  }
+}
+@keyframes gqSmokeWholeIn {
+  from { opacity: 0; transform: translateY(0.12em); filter: blur(12px); }
+  to   { opacity: 1; transform: translateY(0);      filter: blur(0); }
+}
+@keyframes gqSmokeWholeOut {
+  0%   { opacity: 1;    transform: translateY(0);        filter: blur(0); }
+  30%  { opacity: 0.9;  filter: blur(4px); }
+  100% { opacity: 0;    transform: translateY(-0.2em);   filter: blur(16px); }
+}
+/* 单字必须是盒（transform / filter 对纯 inline 无效）；.gq-w 让拉丁词整词不断行，
+   词内仍可折（内含多个 inline-block，之间允许断行），中日韩字符一字一盒、
+   处处可断行 → 折行行为与纯文本时代一致。
+   position:relative 是给打字机的光标当锚点的（光标 = 字的 ::after，绝对定位 →
+   脱离流、不占宽度，于是「有没有光标」不影响折行与药丸尺寸） */
+.gq-w { display: inline-block; max-width: 100%; }
+.gq-c { display: inline-block; position: relative; }
+/* ---------- 打字机（轮播台词的效果四进场 与 照片级台词共用同一份 CSS） ----------
+   逐字揭开只读四个自定义属性，谁在用谁写、互不耦合：
+     --tw-d    这个字的开拍时刻（严格自左向右 = i × 一拍）
+     --tw-step 一拍多长（也是光标的亮窗 → 光标一路跟着字往右走）
+     --tw-dur  单字揭开的时长（≤ 一拍，于是最后一个字必在这一相位内打完）
+     --tw-tail 最后一个字打完后，光标再闪一会儿的时间
+   动画一律 forwards（不是 both）：开拍之前用的是基础样式里的 opacity:0 →
+   还没打到的字不会提前露出来；打完之后停在揭开态。
+   逐字只改透明度与 0.08em 的抬落（落在药丸 9px / 窄屏 7px 的内边距里），
+   且所有字从一开始就在流里占好最终的格子（见 js/charsplit.js）→ **零重排**：
+   药丸尺寸进场前就定型，fitFont 量到的高度就是停稳后的高度。 */
+[data-gq-state="type-in"] .gq-c,
+[data-pq-state="type-in"] .gq-c {
+  opacity: 0;
+  animation: gqCharType var(--tw-dur, 0.14s) cubic-bezier(0.2, 0.75, 0.3, 1) var(--tw-d, 0s) forwards;
+}
+@keyframes gqCharType {
+  0%   { opacity: 0; transform: translateY(0.08em) scale(1.03); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* 光标：就是这个字自己的 ::after，只在「自己这一拍」里亮一下 → 连起来看是一支
+   跟着字往右走的光标；最后一个字（js 打的 .gq-c-last 标记）的亮窗多出一段
+   --tw-tail，于是打完后光标原地闪两下再收，像真人停下手。
+   刻意用**有限**动画而不是 infinite：打完就停，不给合成器留长跑的活儿。 */
+[data-gq-state="type-in"] .gq-c::after,
+[data-pq-state="type-in"] .gq-c::after {
+  content: '';
+  position: absolute;
+  left: calc(100% + 0.02em);
+  top: 0.12em;
+  width: max(2px, 0.055em);
+  height: 0.78em;
+  border-radius: 2px;
+  background: #ffe8f1;
+  box-shadow: 0 0 9px rgba(255, 110, 165, 0.9);
+  opacity: 0;
+  transform: scaleY(0.2);
+  animation: gqCaretLife var(--tw-step, 0.09s) steps(1, end) var(--tw-d, 0s) forwards;
+}
+[data-gq-state="type-in"] .gq-c.gq-c-last::after,
+[data-pq-state="type-in"] .gq-c.gq-c-last::after {
+  animation-duration: calc(var(--tw-step, 0.09s) + var(--tw-tail, 0.3s));
+}
+@keyframes gqCaretLife {
+  0%   { opacity: 1;    transform: scaleY(1); }
+  42%  { opacity: 0.12; transform: scaleY(1); }
+  58%  { opacity: 1;    transform: scaleY(1); }
+  100% { opacity: 0;    transform: scaleY(0.2); }
+}
+
+/* ---------- 效果四 · 翻页打字机（46 尾补）：翻页离场 + 打字机进场 ----------
+   翻页：整页绕自己的**左边**（transform-origin: 0% 50%）立起来翻走。用 rotateY
+   而不是 rotateX —— rotateY 纵向尺度全程不变，横向因为「远离镜头就朝透视原点收缩」
+   只会**收窄**，投影盒必定落在药丸自己原来的盒子里，而那个盒子已经被 fitFont
+   收进空白带 → 「翻页途中也不越空白带、不压照片」是构造性成立的，
+   不必像上浮交替那样开裁切 + 柔边遮罩（也就没有摘遮罩时的亮度跳变风险）。
+   翻到 76° 就淡出收场，不翻过 90°：越过 90° 后那半个页面会转到镜头一侧被透视
+   **放大**，就会探出原来的盒子。 */
+.gallery-quote-line[data-gq-state="flip-out"] {
+  transform-origin: 0% 50%;
+  animation: gqPageFlip var(--gq-out) cubic-bezier(0.5, 0.03, 0.55, 0.97) both;
+}
+@keyframes gqPageFlip {
+  0%   { opacity: 1; transform: perspective(var(--gq-flip-p, 1100px)) rotateY(0deg);  filter: blur(0); }
+  45%  { opacity: 1; filter: blur(0.5px); }
+  100% { opacity: 0; transform: perspective(var(--gq-flip-p, 1100px)) rotateY(76deg); filter: blur(3.5px); }
+}
+/* 进场：药丸先落定（很快，免得字打在还没出现的底板上），字随后一个个打出来 */
+.gallery-quote-line[data-gq-state="type-in"] { animation: gqTypePillIn 0.26s ease-out both; }
+@keyframes gqTypePillIn { from { opacity: 0; } to { opacity: 1; } }
+/* 超长句（> 120 字）不逐字打：整块快速淡入（翻页离场照旧）。
+   与烟消云散的「整块雾化」同一个理由 —— 几百个字时逐字跑几百个动画不划算，
+   而且那么长的句子本来也只显示前几行 */
+.gallery-quote-line[data-gq-chars="0"][data-gq-state="type-in"] {
+  animation: gqTypeWholeIn var(--gq-in, 0.4s) ease-out both;
+}
+@keyframes gqTypeWholeIn {
+  from { opacity: 0; filter: blur(5px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+
+/* ---------- 照片级台词（46 尾补）：每张照片配一句，聚焦（灯箱）时打出来 ----------
+   位置：画面底部、图注之上（图注 bottom:64 + 自身高 ≈30 → 上沿到 94，这里从 104 起）。
+   pointer-events:none + 只占底部那条空档：不吃点击（点照片 / 点空白仍是退出聚焦）。
+   「不压照片」同样是构造性成立的：gallery.js 算聚焦自适应倍数时，底栏让位量取
+   max(120px, photoQuoteReservePx())（= 药丸下沿 104 + 药丸实高 + 10px 呼吸），
+   照片的可见区因此恒在这句话之上；台词是「照片自己的话」，所以它在聚焦时出现、
+   常态轮播时不出（那时让位给中间偏上的轮播台词）。
+   进场与效果四共用上面那份打字机 CSS（同一个 data-pq-state="type-in" + --tw-* 变量）；
+   关掉「打字机进场」就退化成整块淡入。 */
+.gallery-photoquote {
+  --pq-size: 20px;              /* js 按轮播所选字号折算后写进来（它是图注级的一句话） */
+  --tw-step: 0.08s;
+  --tw-dur: 0.14s;
+  --tw-tail: 0.45s;
+  position: absolute;
+  left: 50%;
+  bottom: 104px;
+  transform: translateX(-50%);
+  max-width: min(76vw, 900px);
+  opacity: 0;
+  visibility: hidden;           /* 不是 display:none：要留过渡；也不参与命中测试 */
+  transition: opacity 0.26s ease, visibility 0.26s ease;
+  pointer-events: none;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+.gallery-photoquote.pq-on { opacity: 1; visibility: visible; }
+.gallery-photoquote.pq-dim { opacity: 0; }          /* 放大看细节时把画面还给照片 */
+/* 兜底：不在聚焦态就绝不显示（js 只会在 setFocus(true) 里点它） */
+body:not(.gallery-focus) .gallery-photoquote { opacity: 0; visibility: hidden; }
+.gallery-photoquote-line {
+  --pq-pad: 7px;
+  margin: 0;
+  padding: var(--pq-pad) 18px;
+  border-radius: 18px;
+  background: rgba(20, 6, 18, 0.52);
+  border: 1px solid rgba(255, 120, 170, 0.3);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+  color: #fff0f6;
+  font-family: inherit;         /* 跟着侧栏选的字体走（js 写在 .gallery-photoquote 上） */
+  font-size: min(var(--pq-size), 5.4vw);
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 18px rgba(255, 77, 141, 0.35);
+  word-break: break-word;
+  opacity: 0;                   /* 明暗全由下面的相位样式驱动 */
+  display: -webkit-box;         /* 最多两行，再长省略号收尾（它是图注，不是正文） */
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.gallery-photoquote-line[data-pq-state="show"] { opacity: 1; }
+.gallery-photoquote-line[data-pq-state="type-in"] { animation: pqPillIn 0.24s ease-out both; }
+.gallery-photoquote-line[data-pq-state="fade-in"] { animation: pqFadeIn 0.3s ease-out both; }
+.gallery-photoquote-line[data-pq-state="out"] { animation: pqFadeOut 0.3s ease-in both; }
+@keyframes pqPillIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pqFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pqFadeOut { from { opacity: 1; } to { opacity: 0; filter: blur(3px); } }
+
+/* 侧栏「相册管理 · 照片级台词」编辑器：跟着「当前选中的那张」走 */
+.photo-quote-edit { margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(255, 120, 170, 0.25); }
+.photo-quote-who {
+  margin: 2px 0 6px;
+  font-size: 12px;
+  color: rgba(255, 217, 231, 0.92);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.photo-quote-input { min-height: 46px; }
+
+/* 烟消云散的药丸与上浮交替**完全同高**（上下各 9px 内边距，框内不再给「飘出去的字」
+   预留留白）：散烟时要飘出框外的字改由下面这条规则放行 —— **没被截成省略号的行**
+   在烟消云散下把 overflow 打开（line-clamp 只对超过 --gq-clamp 行数的句子起作用，
+   没截断的行打开 overflow 不影响折行 / 截断 / 高度），字就能飘出药丸、散进空白带；
+   真的被截断的长句照旧 overflow:hidden 护住省略号，它首行字飘到框上沿会被软切，
+   但那一刻自带 ≥9px 模糊与趋零透明度，肉眼几乎察觉不到。
+   data-gq-trunc 由 js 的 fitFont 每轮按 scrollHeight / clientHeight 量好写入。
+   （整块雾化那条退路不需要这些：整块带着自己的 overflow 一起平移，不会自裁） */
+.gallery-quotes[data-gq-effect="smoke"] .gallery-quote-line[data-gq-chars="1"]:not([data-gq-trunc="1"]) {
+  overflow: visible;
+}
+
+@media (max-width: 700px) {
+  .gallery-panel { width: 216px; right: 10px; padding: 10px; }
+  .gallery-group { padding: 9px 9px 10px; }
+  /* 窄屏侧栏变窄：让位量跟着变小，台词块仍然居中 */
+  .gallery-quotes { --gq-panel-side: 236px; }
+  .gallery-quote-line { --gq-pad: 7px; padding-inline: 14px; border-radius: 18px; }
+  /* 窄屏底部空间紧：照片级台词贴得更低、更窄，别把聚焦照片挤得太小 */
+  .gallery-photoquote { bottom: 96px; max-width: 88vw; }
+  .gallery-photoquote-line { padding-inline: 13px; border-radius: 15px; }
+}
+
+/* 内置照片角标：「仓库自带的」与「访客自己加的」一眼可分 */
+.gallery-thumb-builtin::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ff4d8d, #ffb0c8);
+  opacity: 0.85;
+}
+/* 「这张配了专属台词」：与「内置」角标同一套视觉，位置错开（左上 vs 左下），
+   聚焦时打出来的那句在侧栏里一眼就能找到是哪几张 */
+.gallery-thumb-quote {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 6px;
+  background: rgba(20, 6, 16, 0.72);
+  color: #ffd9e7;
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+  pointer-events: none;
+}
+.gallery-thumb-tag {
+  position: absolute;
+  left: 3px;
+  bottom: 5px;
+  padding: 0 4px;
+  border-radius: 6px;
+  font-size: 10px;
+  line-height: 15px;
+  color: #fff;
+  background: rgba(20, 16, 30, 0.62);
+  pointer-events: none;
+}
+
+/* ================================================================
+   开场闪屏（51）：秘密花园问候 + 7→1 读秒
+   幕布不透明盖住整屏 → 主界面（body.intro-playing 时 visibility:hidden）
+   在揭幕前一点不露；动画全是有限关键帧，打完即停。
+   ================================================================ */
+#introSplash {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+  background:
+    radial-gradient(1200px 700px at 50% 38%, rgba(255, 110, 165, 0.10), transparent 62%),
+    radial-gradient(900px 520px at 50% 80%, rgba(122, 62, 160, 0.14), transparent 70%),
+    #150a12;
+  cursor: pointer;
+  user-select: none;
+}
+body.intro-playing > *:not(#introSplash) { visibility: hidden; }
+#introSplash.leaving { opacity: 0; transition: opacity 0.55s ease; }
+#introSplash.leaving-fast { opacity: 0; transition: opacity 0.3s ease; }
+
+#introSplash .intro-line {
+  margin: 0;
+  max-width: 86vw;
+  text-align: center;
+  /* 全站字体表（js/fonts.js）里的「卡通」：Comic Sans MS 为 Mac / Windows 双平台
+     都自带的首选，Chalkboard SE 兜 Apple 设备、Yuanti SC 兜中文、cursive 兜底 */
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Yuanti SC', cursive;
+  font-size: clamp(24px, 4.6vw, 46px);
+  letter-spacing: 0.14em;
+  color: #ffe8f1;
+  text-shadow: 0 0 22px rgba(255, 110, 165, 0.55), 0 0 60px rgba(255, 110, 165, 0.25);
+}
+/* 逐字：in/count 相位 = 自中心向两侧凝聚；out 相位 = 自左向右烟消云散。
+   拆字复用 charsplit.js 的 .gq-c（随机漂移变量 --gq-dx/dy/sc/rot 现成），
+   揭示时刻在每字自己的 --it-d / --it-o 上 → 期间零重排 */
+#introSplash[data-intro="in"] .intro-line .gq-c,
+#introSplash[data-intro="count"] .intro-line .gq-c {
+  animation: introCharIn 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) var(--it-d, 0s) both;
+}
+#introSplash[data-intro="out"] .intro-line .gq-c {
+  animation: introCharOut 0.8s cubic-bezier(0.45, 0.05, 0.7, 0.6) var(--it-o, 0s) both;
+}
+@keyframes introCharIn {
+  from {
+    opacity: 0;
+    transform: translate(var(--gq-dx, 0em), var(--gq-dy, 0em)) scale(var(--gq-sc, 1.2)) rotate(var(--gq-rot, 0deg));
+    filter: blur(12px);
+  }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes introCharOut {
+  from { opacity: 1; filter: blur(0); }
+  to {
+    opacity: 0;
+    transform: translate(calc(var(--gq-dx, 0em) * 0.7), calc(var(--gq-dy, 0em) * 1.5 - 0.5em))
+      scale(calc(var(--gq-sc, 1.2) * 1.08)) rotate(var(--gq-rot, 0deg));
+    filter: blur(14px);
+  }
+}
+
+/* 读秒：固定尺寸的盒子（换数字零重排）；新数字裹烟砸入 + 光环扩散，旧数字向上 puff */
+#introSplash .intro-count { position: relative; width: 136px; height: 136px; }
+#introSplash[data-intro="in"] .intro-count { visibility: hidden; }
+#introSplash .intro-digit {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 与问候句同一条全站「卡通」栈（js/fonts.js）：Comic Sans MS 双平台自带 */
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Yuanti SC', cursive;
+  font-size: 96px;   /* 原 68px 偏小，放大一号；盒子固定尺寸 → 换数字仍零重排 */
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #ffd9e7;
+  text-shadow: 0 0 18px rgba(255, 110, 165, 0.8), 0 0 46px rgba(255, 110, 165, 0.35);
+  animation: introDigitIn 0.5s cubic-bezier(0.2, 0.75, 0.3, 1) both;
+}
+#introSplash .intro-digit.leave { animation: introDigitOut 0.45s ease-in both; }
+#introSplash .intro-digit::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 140, 185, 0.5);
+  box-shadow: inset 0 0 16px rgba(255, 110, 165, 0.35);
+  opacity: 0;
+  animation: introRing 0.9s ease-out both;
+}
+@keyframes introDigitIn {
+  0% { opacity: 0; transform: scale(1.9) translateY(12px); filter: blur(14px); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes introDigitOut {
+  to { opacity: 0; transform: scale(0.72) translateY(-30px); filter: blur(10px); }
+}
+@keyframes introRing {
+  0% { opacity: 0.85; transform: scale(0.62); }
+  100% { opacity: 0; transform: scale(1.28); }
+}
+#introSplash .intro-skip {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: rgba(255, 217, 231, 0.5);
+}
